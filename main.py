@@ -17,6 +17,7 @@ def main():
     grammar = Grammar()
     print("Enter rules count:")
     rule_count = int(input())
+    print("Enter rules:")
     for i in range(rule_count):
         rule = input().split()
         right_part = []
@@ -31,8 +32,9 @@ def main():
     print("Enter word:")
     word = input()
     algo = Algo(grammar)
-    algo.fit()
-    print(algo.parser.parse(word))
+    print("Enter preferable algorithm:")
+    algorithm = input()
+    print(algo.predict(word, algorithm))
 
 
 if __name__ == "__main__":

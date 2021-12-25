@@ -9,7 +9,7 @@ class Grammar:
         self.alphabet = {}
         self.rules = set()
         self.start = ""
-        self.new_start =""
+        self.new_start = ""
 
     def set_alphabet(self, alphabet: dict[str, bool]):
         self.alphabet = alphabet

@@ -4,14 +4,16 @@ class EarleySituation:
         self.right_part = right_part
         self.dot_pos = dot_pos
         self.parent_pos = parent_pos
+        self.is_visited = False
 
     def __eq__(self, other):
         return (self.parent_pos == other.parent_pos) and (self.dot_pos == other.dot_pos) and (
                 self.left_non_terminal.__eq__(other.left_non_terminal)) and (
-                self.right_part.__eq__(other.right_part))
+                self.right_part.__eq__(other.right_part)) and (self.is_visited == other.is_visited)
 
     def __hash__(self):
-        situation_hash = hash(self.left_non_terminal) ^ hash(self.dot_pos) ^ hash(self.parent_pos)
+        situation_hash = hash(self.left_non_terminal) ^ hash(self.dot_pos) ^ hash(self.parent_pos) ^ hash(self.
+                                                                                                          is_visited)
         for symbol in self.right_part:
             situation_hash = situation_hash ^ hash(symbol)
         return situation_hash

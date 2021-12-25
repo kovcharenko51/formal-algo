@@ -21,6 +21,8 @@ class EarleyParser:
 
     def predict(self, position: int):
         for situation in self.config[position]:
+            if situation.is_visited:
+                continue
             for rule in self.grammar.rules:
                 if situation.dot_pos == len(situation.right_part):
                     continue
@@ -30,10 +32,13 @@ class EarleyParser:
                 if new_situation in self.config[position]:
                     continue
                 self.config[position].add(new_situation)
+                situation.is_visited = True
             break
 
     def complete(self, position: int):
         for situation in self.config[position]:
+            if situation.is_visited:
+                continue
             if situation.dot_pos != len(situation.right_part):
                 continue
             for prev_situation in self.config[situation.parent_pos]:
@@ -46,6 +51,7 @@ class EarleyParser:
                 if new_situation in self.config[position]:
                     continue
                 self.config[position].add(new_situation)
+                situation.is_visited = True
                 return
 
     def parse(self) -> bool:

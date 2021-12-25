@@ -2,9 +2,14 @@ from grammar import Grammar, GrammarRule
 from situation import LRSituation
 from collections import deque
 from copy import deepcopy
-from lr_machine_state import LRMachineState
+from lr_machine_state import LRMachineState, LRTableState
 
 END = "$"
+
+
+class NonLRGrammarException(Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
 
 class LRParser:
@@ -26,6 +31,11 @@ class LRParser:
         first_symbols = set()
         for rule in self.grammar.rules:
             if rule.left_non_terminal != symbols[0]:
+                continue
+            if len(rule.right_part) == 0:
+                first_symbols |= self.first(symbols[1:])
+                continue
+            if rule.right_part[0] == rule.left_non_terminal:
                 continue
             first_symbols |= self.first(rule.right_part)
         return first_symbols
@@ -54,7 +64,6 @@ class LRParser:
                     break
         return LRMachineState(new_situation_set)
 
-    @staticmethod
     def goto(self, state: LRMachineState, symbol: str) -> LRMachineState:
         new_situation_set = set()
         for situation in state.situations:
@@ -78,7 +87,7 @@ class LRParser:
                 if self.states[state] in visited:
                     continue
                 for symbol in self.grammar.alphabet.keys():
-                    goto_state = self.goto(self, state, symbol)
+                    goto_state = self.goto(state, symbol)
                     if len(goto_state.situations) == 0:
                         continue
                     if goto_state not in self.states:
@@ -96,15 +105,23 @@ class LRParser:
                 if situation.dot_pos == len(situation.right_part):
                     self.table.setdefault(name, {})
                     if situation.left_non_terminal == self.new_start:
-                        self.table[name][situation.next_letter] = ("a", None)
+                        if self.table[name].get(situation.next_letter) is not None:
+                            raise NonLRGrammarException("Grammar is non-LR")
+                        self.table[name][situation.next_letter] = LRTableState.get_accept_state()
                     else:
-                        self.table[name][situation.next_letter] = ("r", GrammarRule(situation.left_non_terminal,
-                                                                                    situation.right_part))
+                        if self.table[name].get(situation.next_letter) is not None and \
+                                self.table[name][situation.next_letter].state_type != "r":
+                            raise NonLRGrammarException("Grammar is non-LR")
+                        self.table[name][situation.next_letter] = LRTableState.get_reduce_state(
+                            GrammarRule(situation.left_non_terminal, situation.right_part))
                 else:
                     self.table.setdefault(name, {})
                     for symbol, goto_state in self.transitions[name].items():
                         self.table.setdefault(name, {})
-                        self.table[name][symbol] = ("s", goto_state)
+                        if self.table[name].get(symbol) is not None and \
+                                self.table[name][symbol].state_type != "s":
+                            raise NonLRGrammarException("Grammar is non-LR")
+                        self.table[name][symbol] = LRTableState.get_shift_state(goto_state)
 
     def parse(self, word: str) -> str:
         word += END
@@ -116,21 +133,21 @@ class LRParser:
             self.table.setdefault(state, {})
             table_pos = self.table[state].get(word[word_pos])
             if table_pos is None:
-                return "error"
-            if table_pos[0] == "a":
+                return "reject"
+            if table_pos.state_type == "a":
                 return "accept"
-            if table_pos[0] == "s":
+            if table_pos.state_type == "s":
                 path.append(word[word_pos])
-                path.append(table_pos[1])
+                path.append(table_pos.goto_state)
                 word_pos += 1
             else:
-                for i in range(len(table_pos[1].right_part)):
+                for i in range(len(table_pos.rule.right_part)):
                     path.pop()
                     path.pop()
                 new_state = path[-1]
-                path.append(table_pos[1].left_non_terminal)
+                path.append(table_pos.rule.left_non_terminal)
                 self.table.setdefault(new_state, {})
-                new_table_pos = self.table[new_state].get(table_pos[1].left_non_terminal)
+                new_table_pos = self.table[new_state].get(table_pos.rule.left_non_terminal)
                 if new_table_pos is None:
                     return "error"
-                path.append(new_table_pos[1])
+                path.append(new_table_pos.goto_state)
